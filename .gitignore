@@ -2,5 +2,5 @@
 *.csv
 *.jpeg
 *.jpg
-*.ipyb
+*.ipynb
 *.png
