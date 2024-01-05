@@ -250,10 +250,10 @@ for b in range(blocks):
                 ]
 
     
-    # Open a single CSV file to store all episode data
+    # Open a  CSV file to store episode-data of each block
     
-    episode_filename = sub_id + "_game_data_block_"+ str(b+1) +".csv"
-    with open(episode_filename,'w', newline='') as starting_file:
+    block_filename = sub_id + "_game_data_block_"+ str(b+1) +".csv"
+    with open(block_filename,'w', newline='') as starting_file:
         csv_writer = csv.writer(starting_file)
         csv_writer.writerow(columns)
         
@@ -469,7 +469,7 @@ for b in range(blocks):
             
 
         # Write episode_data to CSV file after each block
-    with open(episode_filename, 'a', newline='') as file:
+    with open(block_filename, 'a', newline='') as file:
             csv_writer = csv.writer(file)
             csv_writer.writerows(all_episode_data)
 
@@ -628,7 +628,9 @@ game.init()
 - Zuletzt initialisieren wir das Spiel, starten es also.
 
 Bis hierher haben wir alle Voreinstellungen vorgenommen: Woher bezieht es Daten zur Konfiguration(Karte,Auflösung,Variablen, Spielbare Aktionen,...), wir haben bestimmte Inhalte der Konfiguration nochmals individuell geändert, dem Programm erlaubt, uns Daten für Positionen und Objekte freizugeben, den (virtuellen) Bildschirm angeschalten, festgelegt was der Computer macht (beobachten) und das Spiel gestartet.
-Weiter geht es nun mit den für das Spiel und seine Datenaufzeichnung wichtigen Funktionen und dem "Gefäß" in dem wir die Daten abspeichern.
+
+
+Ab hier geht es nun darum, was **innerhalb** des Spiels passiert: In welchem Rahmen und wie Daten erzeugt und abgerufen/ausgegeben werden, wie lange ein Spiel geht und wie die Daten letztendlich abgespeichert werden.
 
 Funktionen: Zunächst ein kurzer Exkurs zu Funktionen im allgemeinen. Funktionen können sehr hilfreich in der Vermeidung von unübersichtlich langem Code sein. Nicht nur, dass sie eingeklappt werden können, sodass man sie nicht immer in Gänze entlang gehen muss bei Betrachtung des Scripts, sondern auch, wenn es an die in den Funktionen definierten Aktionen in der Organisation geht. Wenn ich eine Aktion[^c] immer wieder ausführen möchte, so empfiehlt es sich, diese einmal zu definieren und später nur noch zu spezifizieren womit es denn genau arbeiten soll. Etwas klarer wird es vielleicht wenn wir das nochmal an den beiden nachfolgend im Script definierten Funktionen betrachten
 [^c]: Hier im Sinne von "du bekommst einen Input und machst etwas damit"
@@ -657,7 +659,7 @@ def translate_action(last_action):
 - Zunächst definiere ich die Variable die ich nachher auswerfen lassen will (last_action_trnsl) mit einem leeren Wert. Ich nehme hier den String "NA". Die Variable vorerst mit einem Wert zu versehen ist notwendig. 
 - Und dann sage ich der Funktion wie es mit dem Input umgehen soll: durch if/elif-Funktionen sage ich jetzt "Wenn 'last_action' dem Vektor [x,y,z] entspricht, dann ersetze den Wert "NA" von 'last_action_trnsl' mit "ABC"." Wenn der erste Fall nicht zutrifft, geht es über "elif" zum nächsten usw..  
 - Schlussendlich soll es mir die Variable 'last_action_trnsl' zurückgeben (englisch "to return"). 
-- Kurz und knapp: Die Funktio nimmt als Input 'last_action' (was wie wir später sehen einem dieser drei Vektoren entspricht), gleicht diesen Input mit den 3 angegebenen ab und ändert den Wert der Variable 'last_action_trnsl' vpn "NA" zu dem entsprechenden String, und gibt die Variable mit dem neuen Wert zurück.
+- Kurz und knapp: Die Funktio nimmt als Input 'last_action', gleicht diesen Input mit den 3 angegebenen ab und ändert den Wert der Variable 'last_action_trnsl' vpn "NA" zu dem entsprechenden String, und gibt die Variable mit dem neuen Wert zurück. Bewege ich mich oder schieße, ist der Input gleich einem der drei Vektoren, wenn ich nichts tue, bleibt der Wert von 'last_action_trnsl' bei "NA"
 
 
 Objektdaten erzeugen
@@ -673,23 +675,58 @@ Objektdaten erzeugen
 - Hier hat die Funktion den Namen "find_object_data" und drei Variablen als Input. Ich möchte später mit einer Liste, einer spezifischen ID und einem bestimmten Objektnamen arbeiten, also nenne ich die Platzhalter für die Variablen entsprechend.
 - for ... in ... : Ich möchte jetzt dass es für jedes Objekt in der Liste etwas macht. 'object_list' ist hier genauso zu verwenden, aber das 'o' könnte theoretisch auch 'i' oder 'e' oder 'object' heißen. Da es mir um ein Objekt geht und ich Platz sparen möchte habe ich 'o' gewählt. Allgemein sagt dieser Teil aber "Für jedes Element in diesem oder jenem".
 - Ich brauche später nur noch Daten der anderen Objekte neben dem Spieler (der Spieler ist für das Spiel ein Objekt). Darum sage ich "Wenn die Objekt_ID die du aus dem Spiel ziehst gleich der 'object_id' ist und wenn gleichzeitig der Objekname ungleich einem bestimmten 'object_name' ist, dann:"
-- "gebe mir das Objekt zurück"
+- "gebe mir das Objekt (seine Daten) zurück"
 -"ansonsten gebe nichts zurück"
 
 
 
-Ab hier geht es nun darum, was **innerhalb** des Spiels passiert: In welchem Rahmen und wie Daten erzeugt und abgerufen/ausgegeben werden, wie lange ein Spiel geht und wie die Daten letztendlich abgespeichert werden.
+
 
 
 Spiellänge:
 ```{python}
 # Specify how many Episodes 
-episodes = 3
+episodes = 10
 ```
 
-- Wir sagen hier, wie viele Episoden gespielt werden, bis das Spiel geschlossen wird. Eine Episode entspricht einem Spieldurchlauf, der Spieldurchlauf wird wiederum beendet, indem ein festgelegtes Ziel erreicht wird. Bspw. endet im Szenario "Basic" eine Episode, sobald das Monster getötet (erschossen) wurde. Im Beispiel ist sie auf 3 festgesetzt, was meiner Meinung nach ein guter Wert für Tests ist. Man möchte keine 10 oder mehr Durchläufe spielen müssen um z.B. zu sehen, ob die geänderte Datenaufzeichnung für mehrere Episoden richtig funktioniert
+- Wir sagen hier, wie viele Episoden gespielt werden, bis das Spiel geschlossen wird. Eine Episode entspricht einem Spieldurchlauf, der Spieldurchlauf wird wiederum beendet, indem eines oder von mehreren oder ein  festgelegtes Ziel erreicht wird. Bspw. endet im Szenario "Basic" eine Episode, sobald das Monster getötet (erschossen) wurde, oder nach 151 Schleifendurchläufen (später dazu mehr). Im Beispiel ist die Anzahl der Episoden auf 10 festgesetzt. Wir erinnern uns: Es gibt zwei Blöcke, also 2*10 Episoden. 
 
 
+Die Datei anlegen:
+```{python}
+# header for the csv-file
+    columns = ["Episode",
+                "State",
+                "Tic", 
+                "Health", 
+                "Ammo", 
+                "x_pos", 
+                "y_pos", 
+                "z_pos", 
+                "angle/orientation",
+                .
+                .
+                .
+    ]
+
+```
+
+- Wir erstellen eine Liste mit '[  ]' um darin die Spaltennamen zu speichern. Hier muss also schon die Überlegung stattfinden, welche Daten man in welcher Reihenfolge aufzeichnen möchte. Die Liste nennen wir "columns" (Spalten)
+
+
+
+```{python}
+ # Open a  CSV file to store episode-data of each block
+    
+    block_filename = sub_id + "_game_data_block_"+ str(b+1) +".csv"
+    with open(block_filename,'w', newline='') as starting_file:
+        csv_writer = csv.writer(starting_file)
+        csv_writer.writerow(columns)
+```
+
+
+- Theoretisch könnte sowohl die Liste mit den Spaltennamen als auch das Schreiben der Datei erst hinterher geschehen, es ist aber arbeitstechnisch sinnvoller, da durch die Liste direkt vor der Erstellung der Datenaufzeichnung einen Überblick über die zu erstellenden arrays gibt (gleich mehr dazu). 
+- Was diese Zeilen Code nun machen: Zunächst erstellen wir einen Dateinamen. Die Variable dafür nennen wir passenderweise 'block_filename'. Und dann sagen wir aus was der Dateiname für jeden Block bestehen soll: aus der Variable 'sub_id', welcher wir bereits zu Beginn einen Wert geben (dieser dient dazu verschiedene Durchläufe auseinander zu halten, also zum Beispiel, wenn man mehrere Personen misst), zu dem Wert dieser Variable einen String (den wir deshalb in "" packen), außerdem die Zahl des Blocks (was eigentlich eine Zahl ist, ich möchte es hier aber als String, darum schreibe ich str() davor. Außerdem ist zu bedenken, dass Python mit dem Zählen bei 0 beginnt, weshalb ich immer eine 1 dazu addieren muss). Letzendlich darf die Dateiendung ".csv" nicht fehlen. 
 
 
 
