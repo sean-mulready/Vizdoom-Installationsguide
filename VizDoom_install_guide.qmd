@@ -73,6 +73,7 @@ Standardmäßig ist Python auf Ubuntu vorinstalliert, aber es schadet grundsätz
 
 ![VizDoom installieren](vizdoom-install.jpeg){#fig-install fig-align="center" width=80%}
 
+- ViZDoom updaten: Um ViZDoom hin und wieder auf den neusten Stand zu bringen, lohnt es sich, den Update-Befehl auszuführen. Der lautet einfach: "pip install --upgrade vizdoom"
 
 ## Die Programmieroberfläche, ihre Erweiterungen und Ordnerstrukturen anlegen {#sec-extns}
 
@@ -273,10 +274,6 @@ for b in range(blocks):
     #Use a set to keep track of uniqueobject IDs
     unique_object_ids = set()
 
-        
-
-    # create a dictionary to store mapping between object ID and column index
-    object_id_to_column_index = {}
 
     #create single column arrays for each variable to later concatenate into a dataframe
     Episode_arr = np.full((episodes*151,1), np.nan, dtype = np.int32)
@@ -327,7 +324,7 @@ for b in range(blocks):
         start_time = time.time()  # Record the start time
 
         
-        episode_index = 0 
+         
         
         
         
@@ -412,7 +409,7 @@ for b in range(blocks):
         End_Rew_arr[i] = game.get_total_reward()
         End_Time_arr[i] = (time.time()-start_time)
         End_FPS_arr[i] = (state.number/(time.time()-start_time))
-        #episode_index += 1
+        
 
         
     
@@ -689,7 +686,7 @@ Spiellänge:
 episodes = 10
 ```
 
-- Wir sagen hier, wie viele Episoden gespielt werden, bis das Spiel geschlossen wird. Eine Episode entspricht einem Spieldurchlauf, der Spieldurchlauf wird wiederum beendet, indem eines oder von mehreren oder ein  festgelegtes Ziel erreicht wird. Bspw. endet im Szenario "Basic" eine Episode, sobald das Monster getötet (erschossen) wurde, oder nach 151 Schleifendurchläufen (später dazu mehr). Im Beispiel ist die Anzahl der Episoden auf 10 festgesetzt. Wir erinnern uns: Es gibt zwei Blöcke, also 2*10 Episoden. 
+- Wir sagen hier, wie viele Episoden gespielt werden, bis das Spiel geschlossen wird. Eine Episode entspricht einem Spieldurchlauf, der Spieldurchlauf wird wiederum beendet, indem eines von mehreren oder ein  festgelegtes Ziel erreicht wird. Bspw. endet im Szenario "Basic" eine Episode, sobald das Monster getötet (erschossen) wurde, oder nach 151 Schleifendurchläufen (später dazu mehr). Im Beispiel ist die Anzahl der Episoden auf 10 festgesetzt. Wir erinnern uns: Es gibt zwei Blöcke, also 2*10 Episoden. 
 
 
 Die Datei anlegen:
@@ -711,10 +708,10 @@ Die Datei anlegen:
 
 ```
 
-- Wir erstellen eine Liste mit '[  ]' um darin die Spaltennamen zu speichern. Hier muss also schon die Überlegung stattfinden, welche Daten man in welcher Reihenfolge aufzeichnen möchte. Die Liste nennen wir "columns" (Spalten)
+- Wir erstellen eine Liste mit '[  ]' um darin die Spaltennamen für **alles innerhalb der Episoden** zu speichern. Hier muss also schon die Überlegung stattfinden, welche Daten man in welcher Reihenfolge aufzeichnen möchte. Die Liste nennen wir "columns" (Spalten)
 
 
-
+Die Datei schreiben
 ```{python}
  # Open a  CSV file to store episode-data of each block
     
@@ -726,7 +723,82 @@ Die Datei anlegen:
 
 
 - Theoretisch könnte sowohl die Liste mit den Spaltennamen als auch das Schreiben der Datei erst hinterher geschehen, es ist aber arbeitstechnisch sinnvoller, da durch die Liste direkt vor der Erstellung der Datenaufzeichnung einen Überblick über die zu erstellenden arrays gibt (gleich mehr dazu). 
-- Was diese Zeilen Code nun machen: Zunächst erstellen wir einen Dateinamen. Die Variable dafür nennen wir passenderweise 'block_filename'. Und dann sagen wir aus was der Dateiname für jeden Block bestehen soll: aus der Variable 'sub_id', welcher wir bereits zu Beginn einen Wert geben (dieser dient dazu verschiedene Durchläufe auseinander zu halten, also zum Beispiel, wenn man mehrere Personen misst), zu dem Wert dieser Variable einen String (den wir deshalb in "" packen), außerdem die Zahl des Blocks (was eigentlich eine Zahl ist, ich möchte es hier aber als String, darum schreibe ich str() davor. Außerdem ist zu bedenken, dass Python mit dem Zählen bei 0 beginnt, weshalb ich immer eine 1 dazu addieren muss). Letzendlich darf die Dateiendung ".csv" nicht fehlen. 
+- Was diese Zeilen Code nun machen: Zunächst erstellen wir einen Dateinamen. Die Variable dafür nennen wir passenderweise 'block_filename'. Und dann sagen wir aus was der Dateiname für jeden Block bestehen soll: aus der Variable 'sub_id', welcher wir bereits zu Beginn einen Wert geben (dieser dient dazu Daten verschiedener Personen auseinander zu halten, wenn man mehrere Personen misst), zu dem Wert dieser Variable einen String (den wir deshalb in "" packen), außerdem die Zahl des Blocks (was eigentlich eine Zahl ist, ich möchte es hier aber als String, darum schreibe ich str() davor. Außerdem ist zu bedenken, dass Python mit dem Zählen bei 0 beginnt, weshalb ich immer eine 1 dazu addieren muss). Letztendlich darf die Dateiendung ".csv"[^d] nicht fehlen.
+- dann "öffnen" (with open) wir  die Datei und sagen zum einen dass sie schreibbar (writeable = 'w') ist und mit welchem Namen wir sie öffen (as starting_file). Anschließend sagen wir mit den zwei weiteren Zeilen in Kürze gefasst, dass es unsere Spaltennamen in einere Reihe in die Datei schreiben soll. Wenn wir uns diese Datei also jetzt ansehen würden, hätten wir eine Zeile mit 25 Zellen die die jeweiligen Begriffe beinhalten.
+
+
+[^d]: csv steht für "comma separated value", also Daten die durch Kommata getrennt sind. Das wird vor allem wichtig, wenn wir die Daten später einlesen und als Tabelle darstellen wollen. Dann müssen wir nämlich sagen, woran das Programm erkennen kann, dass eine Zelle zu Ende ist.
+
+Weitere Spalten, eine weitere Datei:
+```{r}
+ #start with columns-header for the Episode_End_Data
+    columns2 = ["Episode",
+                "Total_Reward",
+                "Time",
+                "FPS"]
+    
+    # Open another csv-file
+    endrow_filename = sub_id + "_endrows_block_" + str(b+1) + ".csv"
+    with open(endrow_filename, 'w', newline='') as end_file:
+        csv_writer = csv.writer(end_file)
+        csv_writer.writerow(columns2)
+```
+
+- Hierzu möchte ich gar nicht zu viele Worte verlieren, da es sich hier genau wie oben verhält. Was hiermit erreicht wird: Neben den Dateien für alles was innerhalb der Episoden eines Blocks passiert, lassen wir uns jetzt zu Ende jeder Episode die wichtigsten Daten zusammenfassen: Episodenzahl, Gesamtpunkte, Gesamtzeit, FPS, also wie viele Bilder pro Sekunde 
+
+
+Doppelung von Informationen und Chaos in den Daten vermeiden:
+```{r}
+ #Use a set to keep track of uniqueobject IDs
+    unique_object_ids = set()
+```
+
+- In Kürze erklärt: Diese Zeile erstellt mir eine zunächst noch leere Menge. Später füllen wir diese mit konkreten IDs von Objekten. Da aber in der Abfrage manche Objekte dauerhaft also damit immer wieder vorkommen, würde die Menge immer größer werden und die ganze Datenaufzeichnung ins Chaos stürzen. Diese Menge ist jedoch anders: Sie lässt keine Doppelungen zu. Wenn ich also später versuche einen Wert hinzuzufügen, der schon in der Menge an Werten ist, wird dieser Wert einfach nicht hinzugefügt. 
+
+Arrays erstellen für die spätere Datenaufzeichnung:
+```{r}
+#create single column arrays for each variable to later concatenate into a dataframe
+    Episode_arr = np.full((episodes*151,1), np.nan, dtype = np.int32)
+    State_arr = np.full((episodes*151,1),np.nan, dtype = np.int32)
+    Tic_arr = np.full((episodes*151,1), np.nan, dtype = np.int32)
+    Health_arr = np.full((episodes*151,1),np.nan, dtype = np.int32)
+    .
+    .
+    .
+```
+
+- Arrays sind so etwas wie Arbeitsspeichergefäße. Wir benutzen Arrays, weil wir so die höchstmögliche Geschwindigkeit der Datenaufzeichnung des Spieldurchlaufes haben. Warum? Arrays werden vor der Datenaufzeichnung erstellt und in ihrer Größe definiert. Ich sage also vorab schon genau, wie viel Arbeitsspeicher der Computer bereit halten soll. Das erhöht die Geschwindigkeit weil der Computer eben nicht ständig prüfen muss, ob er den Speicher vergrößern muss (und wenn er merkt er muss es, wird das Erweitern selbst ja auch nochmal eine zeitraubende Angelegenheit. Da wir hier hier im Bereich von 10-30 ms arbeiten, müssen wir alles was zeit kostet und sei es noch so wenig, verhindern).
+- Mit der Bibliothk numpy gestaltet sich das "Bauen" des zunächst leeren Arrays wie folgt: name_des_Arrays = np.full((Zeilen,Spalten), np.nan[^e], Datentyp[^f] )
+- Warum hier jetzt 25 einzelne Arrays mit jeweils einer Spalte erstellen? Unter anderem, weil das erstellen von Arrays mit gemischten Datentypen (sogenannten "structured arrays") schnell komplex wird.
+- Hier zeigt sich jetzt auch, warum es sinnvoll ist, die Spaltennamen bereits vorab festzulegen: Ich kann mich nun an dieser Liste entlang bewegen beim Erstellen der Arrays um so nichts zu vergessen.
+- Das gleiche machen wir dann noch für die Datei die unsere zusammengefassten Daten enthält. (Siehe das Script)
+
+[^e]: np.nan steht hier für "numpy not a number". Es ist einfach nur ein leerer Platzhalter
+[^f]: Im Script sieht man mehrere Datentypen: np.int32 = integer 32 bit (ganze Zahl), np.float = Kommazahl 64 bit, und der "Sonderfall" für Strings, also Buchstaben, np.dtype('Uxy'), wobei xy für eine Zahl steht, die definiert, wie viele Zeichen **maximal** im String sind. 
+
+
+Start-Index
+```{r}
+#starting the index
+    current_index = 0
+```
+
+- Hier wird der Start-Index definiert als current_index (momentaner Index). Dies dient vor allem dem geordneten befüllen der Arrays wie wir gleich sehen. Und damit er sich innerhalb der Episode erhöht aber nicht zwischen den Episoden wird er *vor* den Episodenloop gesetzt und damit nach jeder Episode wieder auf Null gesetzt.
+
+
+Episoden-Loop:
+```{r}
+# Loop through episodes
+    for i in range(episodes):
+```
+
+- Das hier ist so gesehen schon der erste Loop im Loop (wir erinnern uns an den Block-Loop). Was sagt uns diese Zeile nun? Sie sagt nichts anders als "Für jedes Element i in der Zahlenreihe[^g] (range) der episoden tust du folgendes: "
+
+
+[^g]: Eine wörtliche Übersetzung ist hier schwierig. Wir haben mit episodes eine Zahl definiert. Ob es sich hier nun bei einzelnen Werten i um Zahlen handelt ist egal. Das Programm weiß: episodes gibt mir an wie viele Episoden bzw Elemente es gibt.
+
+
+
 
 
 
