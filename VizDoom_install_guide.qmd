@@ -138,9 +138,7 @@ Ab hier werden wir uns vorerst nur noch mit dem Basic-Szenario beschäftigen, Mo
 Nachfolgend einmal der Code in Gänze, bevor die zu modifizierenden Zeilen gesondern hervorgehoben werden:
 
 \scriptsize
-
 ```{python}
-
 from __future__ import print_function
 import vizdoom as vzd
 import csv
@@ -156,11 +154,13 @@ blocks = 2
 for b in range(blocks):
 
     game = vzd.DoomGame()
-
     # where to get the .ini-file from
     game.set_doom_config_path("/home/seanm/vizdoom_config/_vizdoom.ini")
 
-    # specify the scenario
+    # Choose the scenario config file you wish to watch.
+    # Don't load two configs because the second will overwrite the first one.
+    # Multiple config files are okay, but combining these ones doesn't make much sense.
+
     game.load_config("/home/seanm/.local/lib/python3.10/site-packages/vizdoom/scenarios/basic.cfg")
 
     # Enables information about all objects present in the current episode/level.
@@ -192,12 +192,8 @@ for b in range(blocks):
 
     # Define a translation function for the last action
     def translate_action(last_action):
-        
-        
+       
         last_action_trnsl = "NA"
-
-    
-                
         #scenario basic
                 
         if last_action == [1.0,0.0,0.0]:
@@ -215,9 +211,9 @@ for b in range(blocks):
         for o in object_list:
             if o.id == object_id and o.name != object_name:
                 return o
-        return None
+        #return None
 
-
+    
 
     # Specify how many Episodes 
     episodes = 10
@@ -324,7 +320,7 @@ for b in range(blocks):
         start_time = time.time()  # Record the start time
 
         
-         
+        
         
         
         
@@ -339,10 +335,12 @@ for b in range(blocks):
             
             cumulative_reward += reward  # Update cumulative reward
             current_time = time.time() - start_time
+            
             object_ids = []
             for o in state.objects:
                 object_ids.append(o.id)
-            unique_object_ids.update(object_ids)
+                unique_object_ids.update(object_ids)
+             
             
             # Collect data for each time step within the episode so for each array
             Episode_arr[current_index] = i+1
@@ -360,39 +358,48 @@ for b in range(blocks):
             Time_arr[current_index] = current_time
             
             
+            # get data for Cacodemon
             for object_id in unique_object_ids:
-                object_data = find_object_data(state.objects,object_id,"DoomPlayer")
-                if object_data is not None and object_data.name == "Cacodemon":
-
+                if object_id == 0:
+                    object_data = find_object_data(state.objects, object_id, "DoomPlayer")
+                if object_data is not None:
+            # fill corresponding arrays with data of the Cacodemon
                     ObjID_arr[current_index] = object_data.id
-                    Objname_arr[current_index] =  object_data.name
-                    Objx_arr[current_index] =     object_data.position_x 
-                    Objy_arr[current_index] =     object_data.position_y
-                    Objz_arr[current_index] =     object_data.position_z
-                    Objang_arr[current_index] =  object_data.angle
-
-                elif object_data is not None:
-                    AppobjID_arr[current_index] = object_data.id
-                    Appobjname_arr[current_index] =  object_data.name
-                    Appobjx_arr[current_index] =   object_data.position_x
-                    Appobjy_arr[current_index] =  object_data.position_y 
-                    Appobjz_arr[current_index] =   object_data.position_z
-                    Appobjangle_arr[current_index] =  object_data.angle
-                
+                    Objname_arr[current_index] = object_data.name
+                    Objx_arr[current_index] = object_data.position_x 
+                    Objy_arr[current_index] = object_data.position_y
+                    Objz_arr[current_index] = object_data.position_z
+                    Objang_arr[current_index] = object_data.angle
                 else:
+            # what data to fill the array with if there is none 
                     ObjID_arr[current_index] = 0
-                    Objname_arr[current_index] =  "None"
-                    Objx_arr[current_index] =     0
-                    Objy_arr[current_index] =     0
-                    Objz_arr[current_index] =    0
-                    Objang_arr[current_index] =   0
+                    Objname_arr[current_index] = "None"
+                    Objx_arr[current_index] = 0
+                    Objy_arr[current_index] = 0
+                    Objz_arr[current_index] = 0
+                    Objang_arr[current_index] = 0
+
+            # get data for the other objects
+            for object_id in unique_object_ids:
+                if object_id != 0:
+                    object_data = find_object_data(state.objects, object_id, "DoomPlayer")
+                if object_data is not None:
+            # fill arrays with the data
+                    AppobjID_arr[current_index] = object_data.id
+                    Appobjname_arr[current_index] = object_data.name
+                    Appobjx_arr[current_index] = object_data.position_x
+                    Appobjy_arr[current_index] = object_data.position_y 
+                    Appobjz_arr[current_index] = object_data.position_z
+                    Appobjangle_arr[current_index] = object_data.angle
+                else:
+            # what data to fill the array with if there is none
                     AppobjID_arr[current_index] = 0
-                    Appobjname_arr[current_index] =  "None"
-                    Appobjx_arr[current_index] =     0 
-                    Appobjy_arr[current_index] =     0
-                    Appobjz_arr[current_index] =     0
-                    Appobjangle_arr[current_index] =   0
-                
+                    Appobjname_arr[current_index] = "None"
+                    Appobjx_arr[current_index] = 0 
+                    Appobjy_arr[current_index] = 0
+                    Appobjz_arr[current_index] = 0
+                    Appobjangle_arr[current_index] = 0
+            
                     
                     
                 
@@ -400,8 +407,9 @@ for b in range(blocks):
             
             
             current_index += 1 #increment index
-        
-            if state.number > 150:
+
+            # when to stop the episode, default by config-file is 300 tics
+            if state.number > 150: 
                 break
         
         
@@ -469,6 +477,8 @@ for b in range(blocks):
     with open(block_filename, 'a', newline='') as file:
             csv_writer = csv.writer(file)
             csv_writer.writerows(all_episode_data)
+
+
 
 
 ```
@@ -730,7 +740,7 @@ Die Datei schreiben
 [^d]: csv steht für "comma separated value", also Daten die durch Kommata getrennt sind. Das wird vor allem wichtig, wenn wir die Daten später einlesen und als Tabelle darstellen wollen. Dann müssen wir nämlich sagen, woran das Programm erkennen kann, dass eine Zelle zu Ende ist.
 
 Weitere Spalten, eine weitere Datei:
-```{r}
+```{python}
  #start with columns-header for the Episode_End_Data
     columns2 = ["Episode",
                 "Total_Reward",
@@ -748,7 +758,7 @@ Weitere Spalten, eine weitere Datei:
 
 
 Doppelung von Informationen und Chaos in den Daten vermeiden:
-```{r}
+```{python}
  #Use a set to keep track of uniqueobject IDs
     unique_object_ids = set()
 ```
@@ -756,7 +766,7 @@ Doppelung von Informationen und Chaos in den Daten vermeiden:
 - In Kürze erklärt: Diese Zeile erstellt mir eine zunächst noch leere Menge. Später füllen wir diese mit konkreten IDs von Objekten. Da aber in der Abfrage manche Objekte dauerhaft also damit immer wieder vorkommen, würde die Menge immer größer werden und die ganze Datenaufzeichnung ins Chaos stürzen. Diese Menge ist jedoch anders: Sie lässt keine Doppelungen zu. Wenn ich also später versuche einen Wert hinzuzufügen, der schon in der Menge an Werten ist, wird dieser Wert einfach nicht hinzugefügt. 
 
 Arrays erstellen für die spätere Datenaufzeichnung:
-```{r}
+```{python}
 #create single column arrays for each variable to later concatenate into a dataframe
     Episode_arr = np.full((episodes*151,1), np.nan, dtype = np.int32)
     State_arr = np.full((episodes*151,1),np.nan, dtype = np.int32)
@@ -778,16 +788,18 @@ Arrays erstellen für die spätere Datenaufzeichnung:
 
 
 Start-Index
-```{r}
+```{python}
 #starting the index
     current_index = 0
 ```
 
 - Hier wird der Start-Index definiert als current_index (momentaner Index). Dies dient vor allem dem geordneten befüllen der Arrays wie wir gleich sehen. Und damit er sich innerhalb der Episode erhöht aber nicht zwischen den Episoden wird er *vor* den Episodenloop gesetzt und damit nach jeder Episode wieder auf Null gesetzt.
 
+Bis hierhin ist jetzt schon viel passiert, ohne das überhaupt "etwas" passiert ist. Wir haben dem Programm bisher gesagt, dass und wie groß wir das Spiel sehen wollen, welche Variablen es gibt, welche Steurungskonfiguration und welches Spielszenario wir verwenden möchten, dass es bitte zwei Dateien anlegen soll und ihm gesagt, eine bestimmte Größe an Arbeitsspeicher bereitzustellen um diesen mit Daten zu füllen und den Computer so um die zeitraubende Aufgabe zu entlasten, zu prüfen ob mehr Speicher notwendig ist und diesen dann erzeugen.
+Aber jetzt geht es darum, was innerhalb eines Blocks und dann ziemlich schnell auch schon darum, was innerhalb einer Episode dieses Blocks passiert.
 
 Episoden-Loop:
-```{r}
+```{python}
 # Loop through episodes
     for i in range(episodes):
 ```
@@ -798,9 +810,32 @@ Episoden-Loop:
 [^g]: Eine wörtliche Übersetzung ist hier schwierig. Wir haben mit episodes eine Zahl definiert. Ob es sich hier nun bei einzelnen Werten i um Zahlen handelt ist egal. Das Programm weiß: episodes gibt mir an wie viele Episoden bzw Elemente es gibt.
 
 
+```{python}
+print("Episode #" + str(i + 1))
+        game.new_episode()
+        cumulative_reward = 0  # Initialize cumulative reward
+        start_time = time.time()  # Record the start time
+```
+
+- Die erste Zeile ist eher zur Information. Es sagt dem Programm was es zu Beginn in die Konsole schreiben soll. Das kann aber z.B. hilfreich sein, wenn aus irgendwelchen Gründen das Fenster mit dem Spiel nicht zu sehen ist. Dann kann man an dieser Zeile in der Konsole sehen, dass das Spiel gestartet hat
+- "game.new_episode()" startet die Funktion des ViZDoom Codes der in seiner Tiefe gar nicht näher behandelt wird, aber eben eine neue Episode startet
+- in den zwei weiteren Zeilen setzen wir die kumulative[^h] Punktrechnung und sagen mit "start_time = time.time()" dass die Zeit die der Computer in diesem Moment misst unsere Startzeit ist.
+
+[^h]: kumulativ so etwas wie "hinzufügen", wir addieren fortlaufend die neuen Werte der Punktzahl zu diesem Wert
 
 
 
+Der While-Loop:
+```{python}
+while not game.is_episode_finished():
+```
+
+- Nicht verwirren lassen, aber das ist tatsächlich der (While-)Loop im (For-)Loop im (For-)Loop.
+- Hier haben wir jetzt eine neue Art des Loops wie darüber schon zu lesen ist. Ein While-Loop ist eine Schleife, die solange ausgeführt wird bis etwas bestimmtes passiert.
+- Die Zeile sagt also "Solange 'game.is_episode_finished()' nocht nicht passiert ist tue folgendes:". Dabei ist 'game.is_episode_finished()' eine Abfrage des Programms, die in unserem Beispiel dann "Ja" bzw. "TRUE" zurückmeldet wenn das Monster besiegt ist, weil dass die Bedingung dafür ist. (Aber auch das bewegt sich in den tiefen des Codes)
+
+
+Ein paar Worte zum folgenden Inhalt des Loops vorab: Was wir jetzt beschreiben sieht nach sehr viel aus aber beschreibt nur was in wirklich kurzer Zeit passiert (wir sprechen hier von ca 30 ms die der Computer braucht um die Schleife einmal zu durchlaufen). Es geht jetzt darum welche Daten abgefragt und wo sie zwischengespeichert werden (Arbeitsspeicher also die Arrays wie wir im Folgenden sehen)
 
 
 ## To follow
